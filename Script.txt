@@ -1,0 +1,1474 @@
+-- SAMMY.X • Winchester Elite Edition (With Auto Complete Dalgona & Auto Get Missing Keys) 🖤⚙️
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+
+if CoreGui:FindFirstChild("LumeX_UI") then
+    CoreGui.LumeX_UI:Destroy()
+end
+
+local MainModule = {}
+
+MainModule.get_character = function()
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
+
+MainModule.get_humanoid = function(char)
+    char = char or MainModule.get_character()
+    return char and char:FindFirstChildOfClass("Humanoid")
+end
+
+MainModule.GamePassStates = {
+    PermanentGuard = false,
+    GlassVision = false,
+    EmotePages = false,
+    CustomPlayerTag = false,
+    PrivateServerPlus = false,
+    FreeVIP = false,
+    Lighter = false,
+    AllPasses = false
+}
+
+--// AUTO GET KEYS STATES & VARIABLES
+local tbl = {
+    autoGetKeysEnabled = false
+}
+local tbl2 = {
+    autoGetKeysThread = nil
+}
+
+local function PlaySound(id, vol)
+    task.spawn(function()
+        pcall(function()
+            local sound = Instance.new("Sound")
+            sound.SoundId = id
+            sound.Volume = vol or 0.2
+            sound.Parent = CoreGui
+            sound:Play()
+            task.delay(1, function() sound:Destroy() end)
+        end)
+    end)
+end
+
+local function PlayToggleSound() PlaySound("rbxassetid://9114220037", 0.15) end
+local function PlayErrorSound() PlaySound("rbxassetid://9060815075", 0.15) end
+local function PlayBell() PlaySound("rbxassetid://9060815075", 0.25) end
+
+local function fn4(name)
+    local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if pGui then
+        return pGui:FindFirstChild(name) ~= nil
+    end
+    return false
+end
+
+local function fn5(title, msg)
+    PlayBell()
+    pcall(function()
+        local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if pGui then
+            local notif = pGui:FindFirstChild("NotificationGui") or pGui:FindFirstChild("Notifications")
+        end
+    end)
+end
+
+local function fn14()
+    pcall(function()
+        local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if pGui then
+            local ui = pGui:FindFirstChild("DalgonaUI") or pGui:FindFirstChild("Dalgona")
+            if ui then ui:Destroy() end
+        end
+    end)
+end
+
+local function fn15()
+    pcall(function()
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+        end
+    end)
+end
+
+--// ARCADE AUTO FARM
+MainModule.ArcadeAutoFarmEnabled = false
+MainModule.ArcadeAutoFarmTask = nil
+MainModule.ArcadeCurrentGame = nil
+MainModule.ArcadeConsoleCache = nil
+
+local function fn7()
+    if MainModule.ArcadeConsoleCache and MainModule.ArcadeConsoleCache.Parent then
+        return MainModule.ArcadeConsoleCache
+    end
+    for _, desc in ipairs(workspace:GetDescendants()) do
+        local screen = desc:FindFirstChild("Screen")
+        if screen and screen:FindFirstChild("SurfaceGui") then
+            MainModule.ArcadeConsoleCache = desc
+            return desc
+        end
+    end
+    return nil
+end
+
+local function fn8()
+    local ok, result = pcall(function()
+        return require(ReplicatedStorage.Modules.PlayableArcadeGame)
+    end)
+    if not ok or not result then return end
+    local console = fn7()
+    if not console then return end
+    local character = MainModule.get_character()
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    if MainModule.ArcadeCurrentGame then
+        pcall(function()
+            MainModule.ArcadeCurrentGame.Stopping = true
+            MainModule.ArcadeCurrentGame:Destroy()
+        end)
+        MainModule.ArcadeCurrentGame = nil
+    end
+
+    local v3 = result.new(console, hrp)
+    MainModule.ArcadeCurrentGame = v3
+    v3:start()
+    local now = os.clock()
+
+    while v3.State ~= "Running" and os.clock() - now < 3 do
+        if not MainModule.ArcadeAutoFarmEnabled then return end
+        task.wait(0.1)
+    end
+
+    if not MainModule.ArcadeAutoFarmEnabled then return end
+    if v3.State ~= "Running" then
+        pcall(function() v3:Destroy() end)
+        MainModule.ArcadeCurrentGame = nil
+        return
+    end
+
+    v3.Score = 4499
+    if v3.ScoreLabel then v3.ScoreLabel.Text = "Score: 4499" end
+    table.clear(v3.CalculateScore)
+    for i = 1, 99 do table.insert(v3.CalculateScore, "Coin") end
+    v3:win("You Won! Congrats! :D")
+end
+
+MainModule.toggle_arcade_auto_farm = function(arg)
+    local enabled = arg and true or false
+    MainModule.ArcadeAutoFarmEnabled = enabled
+
+    if MainModule.ArcadeAutoFarmTask then
+        pcall(function() task.cancel(MainModule.ArcadeAutoFarmTask) end)
+        MainModule.ArcadeAutoFarmTask = nil
+    end
+
+    if not enabled then
+        if MainModule.ArcadeCurrentGame then
+            pcall(function()
+                MainModule.ArcadeCurrentGame.Stopping = true
+                MainModule.ArcadeCurrentGame:Destroy()
+            end)
+            MainModule.ArcadeCurrentGame = nil
+        end
+        PlayToggleSound()
+        return true
+    end
+
+    MainModule.ArcadeAutoFarmTask = task.spawn(function()
+        while MainModule.ArcadeAutoFarmEnabled do
+            pcall(fn8)
+            if MainModule.ArcadeAutoFarmEnabled then
+                task.wait(1.5)
+                continue
+            end
+            break
+        end
+        MainModule.ArcadeAutoFarmTask = nil
+    end)
+    PlayToggleSound()
+    return true
+end
+
+MainModule.BandageHelperEnabled = false
+MainModule.toggle_bandage_helper = function(enabled)
+    MainModule.BandageHelperEnabled = enabled
+    _G.BandageHelperActive = enabled
+
+    if enabled then
+        _G.BandageConns = _G.BandageConns or {}
+        local localPlayer2 = Players.LocalPlayer
+        
+        local function fn14_bh(child)
+            if not _G.BandageHelperActive then return end
+            pcall(function()
+                if child:IsA("ColorCorrectionEffect") then
+                    if child.TintColor.G > 0.6 and (child.TintColor.R < 0.5 or child.TintColor.B < 0.5) then
+                        child.TintColor = Color3.fromRGB(255, 255, 255)
+                    end
+                end
+            end)
+        end
+
+        local conn = Lighting.DescendantAdded:Connect(fn14_bh)
+        table.insert(_G.BandageConns, conn)
+
+        local conn2 = RunService.Stepped:Connect(function()
+            if not _G.BandageHelperActive then return end
+            pcall(function()
+                local pGui = localPlayer2:FindFirstChild("PlayerGui")
+                if pGui then
+                    for _, gui in ipairs(pGui:GetDescendants()) do
+                        if gui:IsA("ColorCorrectionEffect") then
+                            if gui.TintColor.G > 0.6 and (gui.TintColor.R < 0.5 or gui.TintColor.B < 0.5) then
+                                gui.TintColor = Color3.fromRGB(255, 255, 255)
+                            end
+                        end
+                    end
+                end
+            end)
+        end)
+        table.insert(_G.BandageConns, conn2)
+    else
+        if _G.BandageConns then
+            for _, c in ipairs(_G.BandageConns) do pcall(function() c:Disconnect() end) end
+            _G.BandageConns = {}
+        end
+    end
+    PlayToggleSound()
+end
+
+MainModule.SetUniformSkinEnabled = false
+MainModule.UniformColorValue = Color3.fromRGB(255, 255, 255)
+
+MainModule.toggle_uniform_skin = function(enabled)
+    MainModule.SetUniformSkinEnabled = enabled
+    _G.SetUniformSkinEnabled = enabled
+    LocalPlayer:SetAttribute("ClothingColorToggle", enabled)
+
+    if enabled and MainModule.UniformColorValue then
+        LocalPlayer:SetAttribute("ClothingColor", MainModule.UniformColorValue)
+        _G.UniformColorValue = MainModule.UniformColorValue
+    end
+    PlayToggleSound()
+end
+
+MainModule.set_uniform_color = function(color)
+    MainModule.UniformColorValue = color
+    _G.UniformColorValue = color
+    if MainModule.SetUniformSkinEnabled then
+        LocalPlayer:SetAttribute("ClothingColor", MainModule.UniformColorValue)
+    end
+end
+
+_G.CustomPlayerNumber = 456
+_G.CustomPlayerNumberEnabled = false
+MainModule.CustomPlayerNumberEnabled = false
+
+MainModule.set_custom_player_number = function(arg)
+    _G.CustomPlayerNumber = tonumber(arg) or 456
+end
+
+MainModule.toggle_custom_player_number = function(enabled)
+    MainModule.CustomPlayerNumberEnabled = enabled
+    _G.CustomPlayerNumberEnabled = enabled
+
+    if enabled then
+        task.spawn(function()
+            while _G.CustomPlayerNumberEnabled do
+                task.wait(1)
+                pcall(function()
+                    local playerTagValue = LocalPlayer:FindFirstChild("PlayerTagValue")
+                    local customPlayerNumber = _G.CustomPlayerNumber or 456
+                    local text = tostring(customPlayerNumber)
+                    if string.len(text) < 3 then
+                        text = string.rep("0", 3 - string.len(text)) .. text
+                    end
+                    local finalVal = tonumber(text) or customPlayerNumber
+                    if playerTagValue and playerTagValue.Value ~= finalVal then
+                        playerTagValue.Value = finalVal
+                    end
+                end)
+            end
+        end)
+    end
+    PlayToggleSound()
+end
+
+MainModule.GetClosestTarget = function(position, guardCanKill, humanoidRootPart2, attribute)
+    local huge = math.huge
+    local v3 = nil
+
+    for _, child in ipairs(Workspace:GetChildren()) do
+        if child:IsA("Model") and child ~= LocalPlayer.Character then
+            local head = child:FindFirstChild("Head")
+            local hum = child:FindFirstChildOfClass("Humanoid")
+            
+            if head and hum and hum.Health > 0 then
+                local flag3 = false
+                if attribute then
+                    if guardCanKill then flag3 = true end
+                else
+                    local playerFromCharacter = Players:GetPlayerFromCharacter(child)
+                    local attribute2 = playerFromCharacter and playerFromCharacter ~= LocalPlayer and playerFromCharacter:GetAttribute("IsGuard") or child.Name:match("Rebel") or child.Name:match("Guard") or child:FindFirstChild("PlayerCanKill") or child:FindFirstChild("TypeOfGuard")
+                    flag3 = attribute2 and true or false
+                end
+
+                local typeOfGuard = attribute and child:FindFirstChild("TypeOfGuard")
+                if typeOfGuard then
+                    typeOfGuard = not (humanoidRootPart2 and humanoidRootPart2:FindFirstChild("GuardCanKillLockOn"))
+                end
+
+                if typeOfGuard and not child:FindFirstChild("GuardCanKill") then flag3 = false end
+
+                if flag3 then
+                    local magnitude = (head.Position - position).Magnitude
+                    if magnitude < huge and magnitude < 1000 then
+                        huge = magnitude
+                        v3 = head
+                    end
+                end
+            end
+        end
+    end
+    return v3, huge
+end
+
+MainModule.GuardTargetLockEnabled = false
+MainModule.GuardTargetLockConn = nil
+
+MainModule.toggle_guard_target_lock = function(enabled)
+    MainModule.GuardTargetLockEnabled = enabled
+    if MainModule.GuardTargetLockConn then
+        MainModule.GuardTargetLockConn:Disconnect()
+        MainModule.GuardTargetLockConn = nil
+    end
+
+    if enabled then
+        MainModule.GuardTargetLockConn = RunService.Stepped:Connect(function()
+            if not MainModule.GuardTargetLockEnabled then return end
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local root = char.HumanoidRootPart
+                local targetHead = MainModule.GetClosestTarget(root.Position, false, root, false)
+                if targetHead then
+                    workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, targetHead.Position)
+                end
+            end
+        end)
+    end
+    PlayToggleSound()
+end
+
+MainModule.SilentAimEnabled = false
+MainModule.SilentAimConn = nil
+
+MainModule.toggle_silent_aim = function(enabled)
+    MainModule.SilentAimEnabled = enabled
+    if MainModule.SilentAimConn then
+        MainModule.SilentAimConn:Disconnect()
+        MainModule.SilentAimConn = nil
+    end
+
+    if enabled then
+        MainModule.SilentAimConn = RunService.Stepped:Connect(function()
+            if not MainModule.SilentAimEnabled then return end
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local root = char.HumanoidRootPart
+                local targetHead = MainModule.GetClosestTarget(root.Position, false, root, false)
+                if targetHead then
+                    workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, targetHead.Position)
+                end
+            end
+        end)
+    end
+    PlayToggleSound()
+end
+
+MainModule.InfiniteAmmoEnabled = false
+MainModule.InfiniteAmmoConn = nil
+
+MainModule.toggle_infinite_ammo = function(enabled)
+    MainModule.InfiniteAmmoEnabled = enabled
+    if MainModule.InfiniteAmmoConn then
+        MainModule.InfiniteAmmoConn:Disconnect()
+        MainModule.InfiniteAmmoConn = nil
+    end
+
+    if enabled then
+        MainModule.InfiniteAmmoConn = RunService.Stepped:Connect(function()
+            if not MainModule.InfiniteAmmoEnabled then return end
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char then
+                    local tool = char:FindFirstChildOfClass("Tool")
+                    if tool then
+                        if tool:FindFirstChild("Ammo") then tool.Ammo.Value = 999 end
+                        if tool:FindFirstChild("StoredAmmo") then tool.StoredAmmo.Value = 999 end
+                        if tool:GetAttribute("Ammo") then tool:SetAttribute("Ammo", 999) end
+                    end
+                end
+            end)
+        end)
+    end
+    PlayToggleSound()
+end
+
+MainModule.AntiSpikeEnabled = false
+MainModule.toggle_anti_spike = function(enabled)
+    MainModule.AntiSpikeEnabled = enabled
+    _G.AntiSpikeEnabled = enabled
+    PlayToggleSound()
+end
+
+MainModule.OneClickDalgonaEnabled = false
+MainModule.OneClickDalgonaConn = nil
+
+MainModule.toggle_one_click_dalgona = function(enabled)
+    MainModule.OneClickDalgonaEnabled = enabled
+    if MainModule.OneClickDalgonaConn then
+        MainModule.OneClickDalgonaConn:Disconnect()
+        MainModule.OneClickDalgonaConn = nil
+    end
+
+    if enabled then
+        MainModule.OneClickDalgonaConn = RunService.Stepped:Connect(function()
+            if not MainModule.OneClickDalgonaEnabled then return end
+            pcall(function()
+                local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+                if pGui then
+                    local dalgonaGui = pGui:FindFirstChild("Dalgona") or pGui:FindFirstChild("DalgonaGui") or pGui:FindFirstChild("Honeycomb")
+                    if dalgonaGui then
+                        local remote = ReplicatedStorage:FindFirstChild("Remotes") and (ReplicatedStorage.Remotes:FindFirstChild("DalgonaComplete") or ReplicatedStorage.Remotes:FindFirstChild("HoneycombComplete"))
+                        if remote then
+                            remote:FireServer(true)
+                        else
+                            local clickBtn = dalgonaGui:FindFirstChild("Click", true) or dalgonaGui:FindFirstChild("Complete", true)
+                            if clickBtn and firesignal then
+                                firesignal(clickBtn.MouseButton1Click)
+                            end
+                        end
+                    end
+                end
+            end)
+        end)
+    end
+    PlayToggleSound()
+end
+
+MainModule.AutoFreezeRLGLEnabled = false
+MainModule.AutoFreezeRLGLThread = nil
+
+MainModule.toggle_auto_freeze_rlgl = function(enabled)
+    MainModule.AutoFreezeRLGLEnabled = enabled
+    if not enabled then MainModule.AutoFreezeRLGLThread = nil end
+
+    if enabled then
+        if MainModule.AutoFreezeRLGLThread then return end
+        MainModule.AutoFreezeRLGLThread = true
+
+        task.spawn(function()
+            while MainModule.AutoFreezeRLGLEnabled do
+                task.wait(0.05)
+                pcall(function()
+                    local isRedLight = false
+                    local rlglModel = Workspace:FindFirstChild("RedLightGreenLight") or Workspace:FindFirstChild("RLGL") or Workspace:FindFirstChild("GameManager") or Workspace:FindFirstChild("Minigame")
+                    if rlglModel then
+                        local lightVal = rlglModel:GetAttribute("LightState") or rlglModel:GetAttribute("State") or rlglModel:GetAttribute("IsRed") or rlglModel:GetAttribute("Light")
+                        if lightVal == "Red" or lightVal == false or lightVal == "RED" or lightVal == 0 then isRedLight = true end
+                    end
+                    
+                    local statusAttr = ReplicatedStorage:GetAttribute("LightState") or ReplicatedStorage:GetAttribute("IsRedLight") or ReplicatedStorage:GetAttribute("State") or ReplicatedStorage:GetAttribute("Light")
+                    if statusAttr == "Red" or statusAttr == true or statusAttr == "RED" or statusAttr == 0 then isRedLight = true end
+
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChildOfClass("Humanoid") then
+                        local rootPart = char.HumanoidRootPart
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        
+                        if isRedLight then
+                            rootPart.AssemblyLinearVelocity = Vector3.zero
+                            rootPart.AssemblyAngularVelocity = Vector3.zero
+                            hum.WalkSpeed = 0
+                            hum.JumpPower = 0
+                        else
+                            if not MainModule.CustomWalkSpeedEnabled then hum.WalkSpeed = 16 end
+                            if not MainModule.CustomJumpPowerEnabled then hum.JumpPower = 50 end
+                        end
+                    end
+                end)
+            end
+        end)
+    end
+    PlayToggleSound()
+end
+
+MainModule.InstantInteractEnabled = false
+MainModule.InstantInteractConn = nil
+
+MainModule.toggle_instant_interact = function(enabled)
+    MainModule.InstantInteractEnabled = enabled
+    if MainModule.InstantInteractConn then
+        MainModule.InstantInteractConn:Disconnect()
+        MainModule.InstantInteractConn = nil
+    end
+
+    if enabled then
+        MainModule.InstantInteractConn = RunService.Stepped:Connect(function()
+            if not MainModule.InstantInteractEnabled then return end
+            pcall(function()
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        prompt.HoldDuration = 0
+                        prompt.MaxActivationDistance = math.max(prompt.MaxActivationDistance, 32)
+                    end
+                end
+            end)
+        end)
+    end
+    PlayToggleSound()
+end
+
+MainModule.RageAutoQTEEnabled = false
+MainModule.RageAutoQTELoop = nil
+
+MainModule.toggle_rage_auto_qte = function(enabled)
+    MainModule.RageAutoQTEEnabled = enabled
+    if MainModule.RageAutoQTELoop then
+        task.cancel(MainModule.RageAutoQTELoop)
+        MainModule.RageAutoQTELoop = nil
+    end
+
+    if enabled then
+        MainModule.RageAutoQTELoop = task.spawn(function()
+            local QTE = nil
+            local success, module = pcall(function()
+                return require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("HBGQTE"))
+            end)
+            if success then QTE = module else MainModule.RageAutoQTEEnabled = false return end
+
+            while MainModule.RageAutoQTEEnabled do
+                task.wait(0.05)
+                pcall(function()
+                    if QTE and QTE.ActiveButtons then
+                        for _, data in pairs(QTE.ActiveButtons) do
+                            if data and data.Inner and data.Outer and not data.Inner:GetAttribute("Tweening") and not data.Inner:GetAttribute("Failed") then
+                                pcall(function() QTE.Pressed(false, data) end)
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+        PlayToggleSound()
+    else
+        PlayToggleSound()
+    end
+    return true
+end
+
+MainModule.RemoveInjuryEnabled = false
+MainModule.RemoveInjuryConn = nil
+
+local injury_names = { Stun=true, stunned=true, Stunned=true, crawl=true, Crawl=true, crawled=true, Crawled=true, crawling=true, Crawling=true }
+
+local function clear_injury_fx()
+    local char = LocalPlayer.Character
+    if not char then return end
+    for _, obj in ipairs(char:GetDescendants()) do
+        if injury_names[obj.Name] then pcall(function() obj:Destroy() end) end
+    end
+end
+
+MainModule.toggle_remove_injury = function(enabled)
+    MainModule.RemoveInjuryEnabled = enabled
+    if MainModule.RemoveInjuryConn then
+        MainModule.RemoveInjuryConn:Disconnect()
+        MainModule.RemoveInjuryConn = nil
+    end
+    if enabled then
+        MainModule.RemoveInjuryConn = RunService.Stepped:Connect(function()
+            if MainModule.RemoveInjuryEnabled then clear_injury_fx() end
+        end)
+    end
+    PlayToggleSound()
+end
+
+MainModule.GlassESPEnabled = false
+MainModule.GlassESPConnection = nil
+MainModule.GlassESPHighlighted = {}
+MainModule.GlassESPOriginal = {}
+
+MainModule.CustomGravityEnabled = false
+MainModule.CustomGravityValue = 196.2
+MainModule.CustomGravityConnection = nil
+
+MainModule.CustomWalkSpeedEnabled = false
+MainModule.CustomWalkSpeedValue = 16
+MainModule.CustomWalkSpeedConnection = nil
+MainModule.OriginalWalkSpeed = 16
+
+MainModule.CustomJumpPowerEnabled = false
+MainModule.CustomJumpPowerValue = 50
+MainModule.CustomJumpPowerConnection = nil
+MainModule.OriginalJumpPower = 50
+
+MainModule.CustomWinEnabled = false
+MainModule.CustomWinValue = 67
+MainModule.CustomWinConnection = nil
+
+MainModule.FreeCam = {
+    Enabled = false,
+    Camera = nil,
+    Speed = 10,
+    Keys = {W=false, S=false, A=false, D=false, Q=false, E=false},
+    Yaw = 0,
+    Pitch = 0
+}
+
+MainModule.FullbrightEnabled = false
+MainModule.HiderESPEnabled = false
+MainModule.SeekerESPEnabled = false
+
+local palette = {
+    {name = "Pure White", color = Color3.fromRGB(250, 250, 250)},
+    {name = "Stealth Gray", color = Color3.fromRGB(170, 170, 170)},
+    {name = "Dark Onyx", color = Color3.fromRGB(45, 45, 45)},
+    {name = "Ghost Silver", color = Color3.fromRGB(210, 210, 210)}
+}
+MainModule.HiderColorIndex = 1
+MainModule.SeekerColorIndex = 2
+
+MainModule.hide_and_seek_escape = function()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local targetPos = Vector3.new(199, 54, -88)
+        local hsFolder = Workspace:FindFirstChild("HideAndSeek") or Workspace:FindFirstChild("Map") or Workspace:FindFirstChild("Base")
+        if hsFolder and hsFolder:IsA("BasePart") then targetPos = hsFolder.Position end
+        character.HumanoidRootPart.CFrame = CFrame.new(targetPos)
+        PlayBell()
+    else
+        PlayErrorSound()
+    end
+end
+
+MainModule.toggle_custom_gravity = function(enabled)
+    MainModule.CustomGravityEnabled = enabled
+    if MainModule.CustomGravityConnection then MainModule.CustomGravityConnection:Disconnect() MainModule.CustomGravityConnection = nil end
+    if enabled then
+        Workspace.Gravity = MainModule.CustomGravityValue
+        MainModule.CustomGravityConnection = RunService.Stepped:Connect(function()
+            if MainModule.CustomGravityEnabled then Workspace.Gravity = MainModule.CustomGravityValue end
+        end)
+    else Workspace.Gravity = 196.2 end
+    PlayToggleSound()
+end
+
+MainModule.set_custom_gravity = function(value)
+    local num = tonumber(value)
+    if num and num >= 0 and num <= 1000 then
+        MainModule.CustomGravityValue = num
+        if MainModule.CustomGravityEnabled then Workspace.Gravity = MainModule.CustomGravityValue end
+    else PlayErrorSound() end
+end
+
+MainModule.toggle_custom_walk_speed = function(enabled)
+    MainModule.CustomWalkSpeedEnabled = enabled
+    if MainModule.CustomWalkSpeedConnection then MainModule.CustomWalkSpeedConnection:Disconnect() MainModule.CustomWalkSpeedConnection = nil end
+    if enabled then
+        local char = MainModule.get_character()
+        if char then
+            local hum = MainModule.get_humanoid(char)
+            if hum then MainModule.OriginalWalkSpeed = hum.WalkSpeed hum.WalkSpeed = MainModule.CustomWalkSpeedValue end
+        end
+        MainModule.CustomWalkSpeedConnection = RunService.Stepped:Connect(function()
+            if MainModule.CustomWalkSpeedEnabled then
+                local c = MainModule.get_character()
+                if c then
+                    local h = MainModule.get_humanoid(c)
+                    if h and h.WalkSpeed ~= MainModule.CustomWalkSpeedValue then h.WalkSpeed = MainModule.CustomWalkSpeedValue end
+                end
+            end
+        end)
+    else
+        local char = MainModule.get_character()
+        if char then
+            local hum = MainModule.get_humanoid(char)
+            if hum then hum.WalkSpeed = MainModule.OriginalWalkSpeed or 16 end
+        end
+    end
+    PlayToggleSound()
+end
+
+MainModule.set_custom_walk_speed = function(value)
+    local num = tonumber(value)
+    if num and num >= 0 and num <= 500 then
+        MainModule.CustomWalkSpeedValue = num
+        if MainModule.CustomWalkSpeedEnabled then
+            local char = MainModule.get_character()
+            if char then
+                local hum = MainModule.get_humanoid(char)
+                if hum then hum.WalkSpeed = MainModule.CustomWalkSpeedValue end
+            end
+        end
+    else PlayErrorSound() end
+end
+
+MainModule.toggle_custom_jump_power = function(enabled)
+    MainModule.CustomJumpPowerEnabled = enabled
+    if MainModule.CustomJumpPowerConnection then MainModule.CustomJumpPowerConnection:Disconnect() MainModule.CustomJumpPowerConnection = nil end
+    if enabled then
+        local char = MainModule.get_character()
+        if char then
+            local hum = MainModule.get_humanoid(char)
+            if hum then MainModule.OriginalJumpPower = hum.JumpPower hum.JumpPower = MainModule.CustomJumpPowerValue end
+        end
+        MainModule.CustomJumpPowerConnection = RunService.Stepped:Connect(function()
+            if MainModule.CustomJumpPowerEnabled then
+                local c = MainModule.get_character()
+                if c then
+                    local h = MainModule.get_humanoid(c)
+                    if h and h.JumpPower ~= MainModule.CustomJumpPowerValue then h.JumpPower = MainModule.CustomJumpPowerValue end
+                end
+            end
+        end)
+    else
+        local char = MainModule.get_character()
+        if char then
+            local hum = MainModule.get_humanoid(char)
+            if hum then hum.JumpPower = MainModule.OriginalJumpPower or 50 end
+        end
+    end
+    PlayToggleSound()
+end
+
+MainModule.set_custom_jump_power = function(value)
+    local num = tonumber(value)
+    if num and num >= 0 and num <= 500 then
+        MainModule.CustomJumpPowerValue = num
+        if MainModule.CustomJumpPowerEnabled then
+            local char = MainModule.get_character()
+            if char then
+                local hum = MainModule.get_humanoid(char)
+                if hum then hum.JumpPower = MainModule.CustomJumpPowerValue end
+            end
+        end
+    else PlayErrorSound() end
+end
+
+MainModule.toggle_custom_win = function(enabled)
+    MainModule.CustomWinEnabled = enabled
+    if MainModule.CustomWinConnection then MainModule.CustomWinConnection:Disconnect() MainModule.CustomWinConnection = nil end
+    if enabled then
+        LocalPlayer:SetAttribute("_GameWins", MainModule.CustomWinValue)
+        MainModule.CustomWinConnection = RunService.Stepped:Connect(function()
+            if MainModule.CustomWinEnabled then LocalPlayer:SetAttribute("_GameWins", MainModule.CustomWinValue) end
+        end)
+    end
+    PlayToggleSound()
+end
+
+MainModule.set_custom_win = function(value)
+    local num = tonumber(value)
+    if num and num >= 0 and num <= 999999 then
+        MainModule.CustomWinValue = math.floor(num)
+        if MainModule.CustomWinEnabled then LocalPlayer:SetAttribute("_GameWins", MainModule.CustomWinValue) end
+    else PlayErrorSound() end
+end
+
+MainModule.toggle_permanent_guard = function(e) MainModule.GamePassStates.PermanentGuard = e LocalPlayer:SetAttribute("__OwnsPermGuard", e) PlayToggleSound() end
+MainModule.toggle_glass_vision = function(e) MainModule.GamePassStates.GlassVision = e LocalPlayer:SetAttribute("__OwnsGlassManufacturerVision", e) PlayToggleSound() end
+MainModule.toggle_emote_pages = function(e) MainModule.GamePassStates.EmotePages = e LocalPlayer:SetAttribute("__OwnsEmotePages", e) PlayToggleSound() end
+MainModule.toggle_custom_player_tag = function(e) MainModule.GamePassStates.CustomPlayerTag = e LocalPlayer:SetAttribute("__OwnsCustomPlayerTag", e) PlayToggleSound() end
+MainModule.toggle_private_server_plus = function(e) MainModule.GamePassStates.PrivateServerPlus = e LocalPlayer:SetAttribute("__OwnsPSPlus", e) PlayToggleSound() end
+MainModule.unlock_vip = function(e) LocalPlayer:SetAttribute("__OwnsVIPGamepass", e) LocalPlayer:SetAttribute("__Owns2xVote", e) MainModule.GamePassStates.FreeVIP = e PlayBell() end
+MainModule.toggle_lighter = function(e) MainModule.GamePassStates.Lighter = e LocalPlayer:SetAttribute("HasLighter", e) PlayToggleSound() end
+
+MainModule.toggle_all_passes = function(e)
+    MainModule.GamePassStates.AllPasses = e
+    MainModule.toggle_permanent_guard(e) MainModule.toggle_glass_vision(e) MainModule.toggle_emote_pages(e)
+    MainModule.toggle_custom_player_tag(e) MainModule.toggle_private_server_plus(e) MainModule.unlock_vip(e) MainModule.toggle_lighter(e)
+end
+
+MainModule.gb_tp_end = function()
+    local targetPos = Vector3.new(-196.372467, 522.192139, -1534.20984)
+    if not workspace:FindFirstChild("GlassBridge") and workspace:FindFirstChild("SpawnLocation") then
+        targetPos = workspace.SpawnLocation.Position
+    end
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(targetPos)
+    end
+    PlayBell()
+end
+
+MainModule.toggle_glass_esp = function(enabled)
+    MainModule.GlassESPEnabled = enabled
+    if MainModule.GlassESPConnection then pcall(function() MainModule.GlassESPConnection:Disconnect() end) MainModule.GlassESPConnection = nil end
+    for part, orig in pairs(MainModule.GlassESPOriginal) do
+        if part and part.Parent then part.Color = orig.Color part.Material = orig.Material end
+    end
+    MainModule.GlassESPOriginal = {} MainModule.GlassESPHighlighted = {}
+    if not enabled then PlayToggleSound() return true end
+    local glassHolder = workspace:FindFirstChild("GlassBridge") and workspace.GlassBridge:FindFirstChild("GlassHolder")
+    if not glassHolder then PlayToggleSound() return true end
+    local glassColors = { real = Color3.fromRGB(240, 240, 240), delayed = Color3.fromRGB(150, 150, 150), fake = Color3.fromRGB(50, 50, 50) }
+    for _, part in ipairs(glassHolder:GetDescendants()) do
+        if part:IsA("BasePart") and part:GetAttribute("GlassPart") then
+            local gType = (part:GetAttribute("ActuallyKilling") and part:GetAttribute("DelayedBreaking")) and "delayed" or (part:GetAttribute("ActuallyKilling") and "fake" or "real")
+            MainModule.GlassESPOriginal[part] = { Color = part.Color, Material = part.Material }
+            part.Color = glassColors[gType] part.Material = Enum.Material.Neon
+            MainModule.GlassESPHighlighted[part] = gType
+        end
+    end
+    PlayToggleSound()
+    return true
+end
+
+MainModule.toggle_free_cam = function(enabled)
+    if enabled then
+        if MainModule.FreeCam.Enabled then return end
+        MainModule.FreeCam.Enabled = true
+        local cam = workspace.CurrentCamera
+        local char = LocalPlayer.Character
+        local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+        MainModule.FreeCam.Camera = cam
+        cam.CameraType = Enum.CameraType.Scriptable
+        
+        local lv = cam.CFrame.LookVector
+        MainModule.FreeCam.Yaw = math.atan2(-lv.X, -lv.Z)
+        MainModule.FreeCam.Pitch = math.asin(math.clamp(lv.Y, -1, 1))
+
+        if char then
+            if char:FindFirstChildOfClass("Humanoid") then char:FindFirstChildOfClass("Humanoid").PlatformStand = true end
+            if rootPart then rootPart.Anchored = true end
+        end
+
+        MainModule.FreeCam.HeartbeatConnection = RunService.RenderStepped:Connect(function()
+            if not MainModule.FreeCam.Enabled then return end
+            local delta = UserInputService:GetMouseDelta()
+            MainModule.FreeCam.Yaw = MainModule.FreeCam.Yaw - delta.X * 0.0025
+            MainModule.FreeCam.Pitch = math.clamp(MainModule.FreeCam.Pitch - delta.Y * 0.0025, -1.45, 1.45)
+            local rot = CFrame.fromEulerAnglesYXZ(MainModule.FreeCam.Pitch, MainModule.FreeCam.Yaw, 0)
+            local move = Vector3.zero
+            if MainModule.FreeCam.Keys.W then move = move + rot.LookVector end
+            if MainModule.FreeCam.Keys.S then move = move - rot.LookVector end
+            if MainModule.FreeCam.Keys.D then move = move + rot.RightVector end
+            if MainModule.FreeEdit or MainModule.FreeCam.Keys.A then move = move - rot.RightVector end
+            if MainModule.FreeCam.Keys.Q then move = move - Vector3.yAxis end
+            if MainModule.FreeCam.Keys.E then move = move + Vector3.yAxis end
+            cam.CFrame = CFrame.new(cam.CFrame.Position + (move.Magnitude > 0 and move.Unit * MainModule.FreeCam.Speed or Vector3.zero)) * rot
+        end)
+
+        MainModule.FreeCam.InputBegan = UserInputService.InputBegan:Connect(function(input)
+            local k = input.KeyCode.Name
+            if MainModule.FreeCam.Keys[k] ~= nil then MainModule.FreeCam.Keys[k] = true end
+        end)
+        MainModule.FreeCam.InputEnded = UserInputService.InputEnded:Connect(function(input)
+            local k = input.KeyCode.Name
+            if MainModule.FreeCam.Keys[k] ~= nil then MainModule.FreeCam.Keys[k] = false end
+        end)
+        PlayToggleSound()
+    else
+        if not MainModule.FreeCam.Enabled then return end
+        MainModule.FreeCam.Enabled = false
+        if MainModule.FreeCam.HeartbeatConnection then MainModule.FreeCam.HeartbeatConnection:Disconnect() end
+        if MainModule.FreeCam.InputBegan then MainModule.FreeCam.InputBegan:Disconnect() end
+        if MainModule.FreeCam.InputEnded then MainModule.FreeCam.InputEnded:Disconnect() end
+        local cam = workspace.CurrentCamera
+        if cam then cam.CameraType = Enum.CameraType.Custom end
+        local char = LocalPlayer.Character
+        if char then
+            if char:FindFirstChildOfClass("Humanoid") then char:FindFirstChildOfClass("Humanoid").PlatformStand = false end
+            if char:FindFirstChild("HumanoidRootPart") then char.HumanoidRootPart.Anchored = false end
+        end
+        PlayToggleSound()
+    end
+    return true
+end
+
+MainModule.toggle_fullbright = function(enabled)
+    MainModule.FullbrightEnabled = enabled
+    if enabled then
+        Lighting.Brightness = 2 Lighting.ClockTime = 14 Lighting.FogEnd = 100000 Lighting.GlobalShadows = false
+    else Lighting.Brightness = 1 Lighting.GlobalShadows = true end
+    PlayToggleSound()
+end
+
+--// FIXED & IMPROVED ESP LOOP (Samifer & Moose Vibe)
+task.spawn(function()
+    while true do
+        task.wait(1)
+        pcall(function()
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character then
+                    local char = plr.Character
+                    local hl = char:FindFirstChild("Sammy_CustomESP")
+                    
+                    -- Dəqiq yoxlama: Qard və ya Seeker olub olmadığını yoxlayırıq
+                    local isSeeker = plr:GetAttribute("IsGuard") or char:FindFirstChild("IsGuard") or char:FindFirstChild("Guard") or char:FindFirstChild("TypeOfGuard") or plr.Name:match("Guard") or char.Name:match("Guard")
+                    
+                    local shouldHighlight = false
+                    local activeColor = Color3.fromRGB(255, 255, 255)
+
+                    if isSeeker and MainModule.SeekerESPEnabled then
+                        shouldHighlight = true
+                        activeColor = palette[MainModule.SeekerColorIndex].color
+                    elseif not isSeeker and MainModule.HiderESPEnabled then
+                        shouldHighlight = true
+                        activeColor = palette[MainModule.HiderColorIndex].color
+                    end
+
+                    if shouldHighlight then
+                        if not hl then
+                            hl = Instance.new("Highlight")
+                            hl.Name = "Sammy_CustomESP"
+                            hl.Parent = char
+                            hl.Adornee = char
+                            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        end
+                        hl.FillColor = activeColor
+                        hl.OutlineColor = Color3.fromRGB(0, 0, 0)
+                        hl.Enabled = true
+                    else
+                        if hl then hl:Destroy() end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+--// UI SETUP (SAMMY / SAMIFER THEME ⚡🔥)
+local Sammy_UI = Instance.new("ScreenGui")
+Sammy_UI.Name = "Sammy_UI"
+Sammy_UI.Parent = CoreGui
+Sammy_UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Sammy_UI.DisplayOrder = 99999
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Parent = Sammy_UI
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 15, 10) -- Sam's jacket / Lucifer white suit subtle dark tone
+ToggleBtn.Position = UDim2.new(0.03, 0, 0.12, 0)
+ToggleBtn.Size = UDim2.new(0, 135, 0, 48)
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.Text = "⚡ SAMMY.X"
+ToggleBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
+ToggleBtn.TextSize = 12
+ToggleBtn.AutoButtonColor = false
+
+local UICornerBtn = Instance.new("UICorner") UICornerBtn.CornerRadius = UDim.new(0, 14) UICornerBtn.Parent = ToggleBtn
+local BtnStroke = Instance.new("UIStroke") BtnStroke.Parent = ToggleBtn BtnStroke.Color = Color3.fromRGB(220, 220, 220) BtnStroke.Transparency = 0.15 BtnStroke.Thickness = 1.8
+
+local ToggleGrad = Instance.new("UIGradient")
+ToggleGrad.Parent = ToggleBtn
+ToggleGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 35, 35)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 10, 10))
+})
+ToggleGrad.Rotation = 45
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = Sammy_UI
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 10, 10)
+MainFrame.Position = UDim2.new(0.25, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 480, 0, 380)
+MainFrame.Active = true MainFrame.Draggable = true MainFrame.ClipsDescendants = true
+
+local UICornerMain = Instance.new("UICorner") UICornerMain.CornerRadius = UDim.new(0, 16) UICornerMain.Parent = MainFrame
+local UIStroke = Instance.new("UIStroke") UIStroke.Parent = MainFrame UIStroke.Color = Color3.fromRGB(230, 230, 230) UIStroke.Transparency = 0.25 UIStroke.Thickness = 1.5
+
+local UIGradient = Instance.new("UIGradient")
+UIGradient.Parent = MainFrame
+UIGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(28, 25, 25)), -- Samifer White Suit / Winchester Vibe
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 8))
+})
+UIGradient.Rotation = 45
+
+local currentCustomSize = UDim2.new(0, 480, 0, 380)
+MainFrame.Size = UDim2.new(0, 0, 0, 0)
+MainFrame.Visible = false
+local isOpen = false
+
+local function toggleUI()
+    isOpen = not isOpen
+    PlayToggleSound()
+    if isOpen then
+        MainFrame.Visible = true
+        MainFrame.Size = UDim2.new(0, 0, 0, 0)
+        TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = currentCustomSize
+        }):Play()
+    else
+        currentCustomSize = MainFrame.Size
+        local tween = TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0)
+        })
+        tween:Play()
+        tween.Completed:Connect(function()
+            if not isOpen then MainFrame.Visible = false end
+        end)
+    end
+end
+
+ToggleBtn.MouseButton1Click:Connect(toggleUI)
+
+local ResizeBtn = Instance.new("TextButton")
+ResizeBtn.Name = "ResizeBtn"
+ResizeBtn.Parent = MainFrame
+ResizeBtn.BackgroundTransparency = 1
+ResizeBtn.Position = UDim2.new(1, -24, 1, -24)
+ResizeBtn.Size = UDim2.new(0, 24, 0, 24)
+ResizeBtn.Text = "◢"
+ResizeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+ResizeBtn.TextSize = 11
+
+local resizing = false
+local resizeStartPos, frameStartSize
+
+ResizeBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        resizing = true
+        resizeStartPos = input.Position
+        frameStartSize = MainFrame.AbsoluteSize
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then resizing = false end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - resizeStartPos
+        local newWidth = math.clamp(frameStartSize.X + delta.X, 360, 850)
+        local newHeight = math.clamp(frameStartSize.Y + delta.Y, 260, 700)
+        MainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+        currentCustomSize = MainFrame.Size
+    end
+end)
+
+local Header = Instance.new("Frame")
+Header.Name = "Header" Header.Parent = MainFrame Header.BackgroundTransparency = 1 Header.Size = UDim2.new(1, 0, 0, 46)
+
+local Title = Instance.new("TextLabel")
+Title.Parent = Header Title.BackgroundTransparency = 1 Title.Position = UDim2.new(0, 16, 0, 0) Title.Size = UDim2.new(0, 350, 1, 0)
+Title.Font = Enum.Font.GothamBold Title.Text = "SAMMY.X  •  SAMIFER WHITE SUIT EDITION" Title.TextColor3 = Color3.fromRGB(255, 255, 255) Title.TextSize = 12 Title.TextXAlignment = Enum.TextXAlignment.Left
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Parent = Header CloseBtn.BackgroundTransparency = 1 CloseBtn.Position = UDim2.new(1, -44, 0, 0) CloseBtn.Size = UDim2.new(0, 44, 1, 0)
+CloseBtn.Font = Enum.Font.GothamBold CloseBtn.Text = "✕" CloseBtn.TextColor3 = Color3.fromRGB(220, 220, 220) CloseBtn.TextSize = 14
+CloseBtn.MouseButton1Click:Connect(toggleUI)
+
+local ContentContainer = Instance.new("ScrollingFrame")
+ContentContainer.Name = "ContentContainer"
+ContentContainer.Parent = MainFrame
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.Position = UDim2.new(0, 12, 0, 48)
+ContentContainer.Size = UDim2.new(1, -24, 1, -56)
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+ContentContainer.ScrollBarThickness = 3
+ContentContainer.ScrollBarImageColor3 = Color3.fromRGB(200, 200, 200)
+ContentContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+local PageLayout = Instance.new("UIListLayout")
+PageLayout.Parent = ContentContainer
+PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
+PageLayout.Padding = UDim.new(0, 8)
+
+local function updateButtonState(btn, state, textName)
+    btn.Text = (state and "[ACTIVE] " or "[OFF] ") .. textName
+    local targetBg = state and Color3.fromRGB(35, 30, 30) or Color3.fromRGB(15, 12, 12)
+    local targetText = state and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 180)
+    local targetStroke = state and Color3.fromRGB(240, 240, 240) or Color3.fromRGB(60, 50, 50)
+    
+    TweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        BackgroundColor3 = targetBg,
+        TextColor3 = targetText
+    }):Play()
+
+    local stroke = btn:FindFirstChildOfClass("UIStroke")
+    if stroke then
+        TweenService:Create(stroke, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            Color = targetStroke,
+            Transparency = state and 0.1 or 0.4
+        }):Play()
+    end
+end
+
+local function AddButton(btnText, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Parent = ContentContainer Btn.BackgroundColor3 = Color3.fromRGB(15, 12, 12) Btn.Size = UDim2.new(1, 0, 0, 38)
+    Btn.Font = Enum.Font.GothamMedium Btn.Text = btnText Btn.TextColor3 = Color3.fromRGB(180, 180, 180) Btn.TextSize = 11
+    Btn.AutoButtonColor = false
+    
+    local Corner = Instance.new("UICorner") Corner.CornerRadius = UDim.new(0, 10) Corner.Parent = Btn
+    local Stroke = Instance.new("UIStroke") Stroke.Parent = Btn Stroke.Color = Color3.fromRGB(60, 50, 50) Stroke.Transparency = 0.4
+    
+    Btn.MouseEnter:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(25, 20, 20)}):Play()
+    end)
+    Btn.MouseLeave:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(15, 12, 12)}):Play()
+    end)
+    
+    Btn.MouseButton1Down:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.06), {Size = UDim2.new(1, -4, 0, 35)}):Play()
+    end)
+    Btn.MouseButton1Up:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.06), {Size = UDim2.new(1, 0, 0, 38)}):Play()
+    end)
+
+    Btn.MouseButton1Click:Connect(function() if callback then callback(Btn) end end)
+    return Btn
+end
+
+local function AddTextBoxInput(labelText, defaultVal, callback)
+    local BoxFrame = Instance.new("Frame")
+    BoxFrame.Parent = ContentContainer BoxFrame.BackgroundColor3 = Color3.fromRGB(12, 10, 10) BoxFrame.Size = UDim2.new(1, 0, 0, 40)
+    local Corner = Instance.new("UICorner") Corner.CornerRadius = UDim.new(0, 10) Corner.Parent = BoxFrame
+    local Stroke = Instance.new("UIStroke") Stroke.Parent = BoxFrame Stroke.Color = Color3.fromRGB(60, 50, 50) Stroke.Transparency = 0.4
+
+    local Label = Instance.new("TextLabel")
+    Label.Parent = BoxFrame Label.BackgroundTransparency = 1 Label.Position = UDim2.new(0, 14, 0, 0) Label.Size = UDim2.new(0.55, 0, 1, 0)
+    Label.Font = Enum.Font.GothamMedium Label.Text = labelText Label.TextColor3 = Color3.fromRGB(200, 200, 200) Label.TextSize = 11 Label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local TextBox = Instance.new("TextBox")
+    TextBox.Parent = BoxFrame TextBox.BackgroundColor3 = Color3.fromRGB(25, 20, 20) TextBox.Position = UDim2.new(0.6, 0, 0.18, 0) TextBox.Size = UDim2.new(0.38, 0, 0.64, 0)
+    TextBox.Font = Enum.Font.GothamBold TextBox.Text = tostring(defaultVal) TextBox.TextColor3 = Color3.fromRGB(255, 255, 255) TextBox.TextSize = 11 TextBox.ClearTextOnFocus = false
+    local BoxCorner = Instance.new("UICorner") BoxCorner.CornerRadius = UDim.new(0, 8) BoxCorner.Parent = TextBox
+
+    TextBox.FocusLost:Connect(function() if callback then callback(TextBox.Text) end end)
+    return BoxFrame
+end
+
+-- Feature Buttons
+AddButton("[OFF] Auto Farm", function(btn)
+    local newState = not MainModule.ArcadeAutoFarmEnabled
+    MainModule.toggle_arcade_auto_farm(newState)
+    updateButtonState(btn, newState, "Auto Farm")
+end)
+
+AddButton("Hide & Seek: Escape", function() MainModule.hide_and_seek_escape() end)
+
+--// AUTO GET MISSING KEYS BUTTON
+AddButton("[OFF] Auto Get Missing Keys", function(btn)
+    tbl.autoGetKeysEnabled = not tbl.autoGetKeysEnabled
+    updateButtonState(btn, tbl.autoGetKeysEnabled, "Auto Get Missing Keys")
+    PlayToggleSound()
+
+    if tbl.autoGetKeysEnabled then
+        if tbl2.autoGetKeysThread then
+            return
+        end
+
+        tbl2.autoGetKeysThread = true
+
+        task.spawn(function()
+            local tbl10 = {
+                "Circle",
+                "Square",
+                "Triangle"
+            }
+
+            while tbl.autoGetKeysEnabled
+                and tbl2.autoGetKeysThread do
+
+                if fn4("HideAndSeek") then
+                    local currentKeys =
+                        LocalPlayer:FindFirstChild("CurrentKeys")
+
+                    if currentKeys then
+                        local tbl11 = {}
+
+                        for _, child in ipairs(currentKeys:GetChildren()) do
+                            tbl11[child.Name] = true
+                        end
+
+                        local tbl12 = {}
+
+                        for _, v3 in ipairs(tbl10) do
+                            if not tbl11[v3] then
+                                tbl12[v3] = true
+                            end
+                        end
+
+                        local effects =
+                            workspace:FindFirstChild("Effects")
+
+                        if effects then
+                            for _, child in ipairs(effects:GetChildren()) do
+
+                                if string.sub(
+                                    child.Name,
+                                    1,
+                                    10
+                                ) == "DroppedKey" then
+
+                                    if tbl12[
+                                        string.sub(
+                                            child.Name,
+                                            11
+                                        )
+                                    ] then
+
+                                        local character =
+                                            LocalPlayer.Character
+
+                                        character =
+                                            character
+                                            and character:FindFirstChild(
+                                                "HumanoidRootPart"
+                                            )
+
+                                        if character then
+                                            local pivot =
+                                                child:IsA("Model")
+                                                and child:GetPivot()
+                                                or child.CFrame
+
+                                            local cFrame =
+                                                character.CFrame
+
+                                            character.CFrame =
+                                                pivot
+
+                                            task.wait(0.1)
+
+                                            character.CFrame =
+                                                cFrame
+
+                                            break
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+
+                task.wait(0.1)
+            end
+
+            tbl2.autoGetKeysThread = nil
+        end)
+    else
+        tbl2.autoGetKeysThread = nil
+    end
+end)
+
+-- Auto Complete Dalgona Button
+AddButton("Auto Complete Dalgona", function()
+    if not fn4("Dalgona") then
+        fn5(nil, "Dalgona is not currently running.")
+        return
+    end
+
+    task.spawn(function()
+        local v3 = LocalPlayer
+        local dalgonatemprempte =
+            ReplicatedStorage:WaitForChild("Remotes"):FindFirstChild("DALGONATEMPREMPTE")
+
+        if not dalgonatemprempte then
+            return
+        end
+
+        dalgonatemprempte:FireServer({ Completed = true })
+        dalgonatemprempte:FireServer({ Success = true })
+
+        fn15()
+        
+        task.spawn(function()
+            repeat
+                task.wait(1)
+                fn14()
+            until not ReplicatedStorage:WaitForChild("Remotes")
+                :FindFirstChild("DALGONATEMPREMPTE")
+
+            fn5(nil, "Dalgona Completed")
+
+            task.spawn(function()
+                local n = tick() + 10
+
+                while tick() < n do
+                    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+
+                    if playerGui then
+                        local dalgonaUI = playerGui:FindFirstChild("DalgonaUI")
+
+                        if dalgonaUI then
+                            dalgonaUI:Destroy()
+                        end
+                    end
+
+                    task.wait(0.5)
+                end
+            end)
+        end)
+    end)
+end)
+
+AddButton("[OFF] Bandage Helper", function(btn)
+    local newState = not MainModule.BandageHelperEnabled
+    MainModule.toggle_bandage_helper(newState)
+    updateButtonState(btn, newState, "Bandage Helper")
+end)
+
+AddButton("[OFF] Set Uniform Skin", function(btn)
+    local newState = not MainModule.SetUniformSkinEnabled
+    MainModule.toggle_uniform_skin(newState)
+    updateButtonState(btn, newState, "Set Uniform Skin")
+end)
+
+AddButton("[OFF] Enable Custom Tag", function(btn)
+    local newState = not MainModule.CustomPlayerNumberEnabled
+    MainModule.toggle_custom_player_number(newState)
+    updateButtonState(btn, newState, "Enable Custom Tag")
+end)
+AddTextBoxInput("Custom Player Number", _G.CustomPlayerNumber, function(val) MainModule.set_custom_player_number(val) end)
+
+AddButton("[OFF] Instant Interact", function(btn)
+    local newState = not MainModule.InstantInteractEnabled
+    MainModule.toggle_instant_interact(newState)
+    updateButtonState(btn, newState, "Instant Interact")
+end)
+
+AddButton("[OFF] Target Lock (Guard/Rebel)", function(btn)
+    local newState = not MainModule.GuardTargetLockEnabled
+    MainModule.toggle_guard_target_lock(newState)
+    updateButtonState(btn, newState, "Target Lock (Guard/Rebel)")
+end)
+
+AddButton("[OFF] Silent Aim", function(btn)
+    local newState = not MainModule.SilentAimEnabled
+    MainModule.toggle_silent_aim(newState)
+    updateButtonState(btn, newState, "Silent Aim")
+end)
+
+AddButton("[OFF] Infinite Ammo", function(btn)
+    local newState = not MainModule.InfiniteAmmoEnabled
+    MainModule.toggle_infinite_ammo(newState)
+    updateButtonState(btn, newState, "Infinite Ammo")
+end)
+
+AddButton("[OFF] Anti Spike", function(btn)
+    local newState = not MainModule.AntiSpikeEnabled
+    MainModule.toggle_anti_spike(newState)
+    updateButtonState(btn, newState, "Anti Spike")
+end)
+
+AddButton("[OFF] One Click Dalgona", function(btn)
+    local newState = not MainModule.OneClickDalgonaEnabled
+    MainModule.toggle_one_click_dalgona(newState)
+    updateButtonState(btn, newState, "One Click Dalgona")
+end)
+
+AddButton("[OFF] Auto Freeze (RLGL)", function(btn)
+    local newState = not MainModule.AutoFreezeRLGLEnabled
+    MainModule.toggle_auto_freeze_rlgl(newState)
+    updateButtonState(btn, newState, "Auto Freeze (RLGL)")
+end)
+
+AddButton("[OFF] All Passes", function(btn)
+    local newState = not MainModule.GamePassStates.AllPasses
+    MainModule.toggle_all_passes(newState)
+    updateButtonState(btn, newState, "All Passes")
+end)
+
+AddButton("[OFF] Permanent Guard", function(btn)
+    local newState = not MainModule.GamePassStates.PermanentGuard
+    MainModule.toggle_permanent_guard(newState)
+    updateButtonState(btn, newState, "Permanent Guard")
+end)
+
+AddButton("[OFF] Rage Auto QTE", function(btn)
+    local newState = not MainModule.RageAutoQTEEnabled
+    local res = MainModule.toggle_rage_auto_qte(newState)
+    if res ~= false then updateButtonState(btn, MainModule.RageAutoQTEEnabled, "Rage Auto QTE") end
+end)
+
+AddButton("[OFF] Remove Injury", function(btn)
+    local newState = not MainModule.RemoveInjuryEnabled
+    MainModule.toggle_remove_injury(newState)
+    updateButtonState(btn, newState, "Remove Injury")
+end)
+
+AddButton("[OFF] Custom Gravity", function(btn)
+    local newState = not MainModule.CustomGravityEnabled
+    MainModule.toggle_custom_gravity(newState)
+    updateButtonState(btn, newState, "Custom Gravity")
+end)
+AddTextBoxInput("Gravity Value:", MainModule.CustomGravityValue, function(val) MainModule.set_custom_gravity(val) end)
+
+AddButton("[OFF] Custom WalkSpeed", function(btn)
+    local newState = not MainModule.CustomWalkSpeedEnabled
+    MainModule.toggle_custom_walk_speed(newState)
+    updateButtonState(btn, newState, "Custom WalkSpeed")
+end)
+AddTextBoxInput("WalkSpeed Value:", MainModule.CustomWalkSpeedValue, function(val) MainModule.set_custom_walk_speed(val) end)
+
+AddButton("[OFF] Custom Jump Power", function(btn)
+    local newState = not MainModule.CustomJumpPowerEnabled
+    MainModule.toggle_custom_jump_power(newState)
+    updateButtonState(btn, newState, "Custom Jump Power")
+end)
+AddTextBoxInput("Jump Power Value:", MainModule.CustomJumpPowerValue, function(val) MainModule.set_custom_jump_power(val) end)
+
+AddButton("[OFF] Custom Win", function(btn)
+    local newState = not MainModule.CustomWinEnabled
+    MainModule.toggle_custom_win(newState)
+    updateButtonState(btn, newState, "Custom Win")
+end)
+AddTextBoxInput("Win Value:", MainModule.CustomWinValue, function(val) MainModule.set_custom_win(val) end)
+
+AddButton("[OFF] FreeCam", function(btn)
+    local newState = not MainModule.FreeCam.Enabled
+    MainModule.toggle_free_cam(newState)
+    updateButtonState(btn, newState, "FreeCam")
+end)
+
+AddButton("[OFF] Fullbright", function(btn)
+    local newState = not MainModule.FullbrightEnabled
+    MainModule.toggle_fullbright(newState)
+    updateButtonState(btn, newState, "Fullbright")
+end)
+
+AddButton("Glass Bridge: TP to End", function() MainModule.gb_tp_end() end)
+AddButton("[OFF] Glass ESP", function(btn)
+    local newState = not MainModule.GlassESPEnabled
+    MainModule.toggle_glass_esp(newState)
+    updateButtonState(btn, MainModule.GlassESPEnabled, "Glass ESP")
+end)
+
+AddButton("[OFF] Hider ESP", function(btn)
+    MainModule.HiderESPEnabled = not MainModule.HiderESPEnabled
+    updateButtonState(btn, MainModule.HiderESPEnabled, "Hider ESP")
+    PlayToggleSound()
+end)
+
+AddButton("Hider Color: " .. palette[MainModule.HiderColorIndex].name, function(btn)
+    MainModule.HiderColorIndex = MainModule.HiderColorIndex % #palette + 1
+    btn.Text = "Hider Color: " .. palette[MainModule.HiderColorIndex].name
+    PlayToggleSound()
+end)
+
+AddButton("[OFF] Seeker ESP", function(btn)
+    MainModule.SeekerESPEnabled = not MainModule.SeekerESPEnabled
+    updateButtonState(btn, MainModule.SeekerESPEnabled, "Seeker ESP")
+    PlayToggleSound()
+end)
+
+AddButton("Seeker Color: " .. palette[MainModule.SeekerColorIndex].name, function(btn)
+    MainModule.SeekerColorIndex = MainModule.SeekerColorIndex % #palette + 1
+    btn.Text = "Seeker Color: " .. palette[MainModule.SeekerColorIndex].name
+    PlayToggleSound()
+end)
